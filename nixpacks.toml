@@ -2,7 +2,7 @@
 nixPkgs = ["python311", "python311Packages.pip", "postgresql", "gcc"]
 
 [phases.install]
-cmds = ["cd backend && python3 -m pip install -r requirements.txt"]
+cmds = ["python3 -m ensurepip --default-pip", "cd backend && python3 -m pip install -r requirements.txt"]
 
 [phases.build]
 cmds = ["cd backend && python3 manage.py collectstatic --noinput"]
