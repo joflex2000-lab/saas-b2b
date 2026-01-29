@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "postgresql", "gcc"]
+nixPkgs = ["python312", "postgresql", "gcc"]
 
 [phases.install]
 cmds = ["python3 -m venv /app/venv", "/app/venv/bin/pip install -r backend/requirements.txt"]
