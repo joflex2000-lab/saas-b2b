@@ -2,7 +2,7 @@ import os
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from django.conf import settings
-from xhtml2pdf import pisa
+# from xhtml2pdf import pisa
 from io import BytesIO
 from .models import Invoice, Order
 
@@ -28,26 +28,19 @@ def generate_invoice_pdf(order_id):
         # Renderizar HTML
         html_string = render_to_string('invoice_template.html', context)
         
-        # Generar PDF con xhtml2pdf
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+        # Generar PDF con xhtml2pdf (DISABLED FOR DEPLOYMENT)
+        # result = BytesIO()
+        # pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+        # if pdf.err:
+        #    print(f"Error generando PDF: {pdf.err}")
+        #    return None
 
-        if pdf.err:
-            print(f"Error generando PDF: {pdf.err}")
-            return None
+        print("PDF Generation is temporarily disabled for deployment.")
+        return None
 
         # Guardar en Modelo
-        invoice = Invoice.objects.create(
-            order=order,
-            number=context['invoice_number'],
-            client_name=order.client.company_name or order.client.username,
-            client_tax_id=order.client.tax_id or 'Consumidor Final',
-            total_amount=order.total_amount
-        )
-        
-        filename = f"invoice_{invoice.number}.pdf"
-        invoice.pdf_file.save(filename, ContentFile(result.getvalue()))
-        invoice.save()
+        # invoice = Invoice.objects.create(...)
+        # ...
 
         return invoice
 
