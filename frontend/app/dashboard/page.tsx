@@ -22,7 +22,9 @@ interface Order {
     items: OrderItem[];
 }
 
-export default function Dashboard() {
+import { Suspense } from 'react';
+
+function DashboardContent() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -188,5 +190,13 @@ export default function Dashboard() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function Dashboard() {
+    return (
+        <Suspense fallback={<div className="p-10 text-center">Cargando...</div>}>
+            <DashboardContent />
+        </Suspense>
     );
 }
