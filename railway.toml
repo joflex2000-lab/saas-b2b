@@ -1,7 +1,4 @@
-[build]
-builder = "NIXPACKS"
-
 [deploy]
-startCommand = "cd backend && /app/venv/bin/python manage.py migrate && /app/venv/bin/gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"
+startCommand = "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
