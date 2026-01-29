@@ -1,10 +1,10 @@
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "postgresql", "gcc"]
+nixPkgs = ["python311", "postgresql", "gcc"]
 
 [phases.install]
-cmds = ["python3 -m ensurepip --default-pip", "cd backend && python3 -m pip install -r requirements.txt"]
+cmds = ["python3 -m venv /app/venv", "/app/venv/bin/pip install -r backend/requirements.txt"]
 
 [phases.build]
-cmds = ["cd backend && python3 manage.py collectstatic --noinput"]
+cmds = ["cd backend && /app/venv/bin/python manage.py collectstatic --noinput"]
 
 
