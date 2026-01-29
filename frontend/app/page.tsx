@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
-import { ShoppingCart, Package, Search, Filter, LogOut, ChevronRight, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Package, Search, Filter, LogOut, ChevronRight, Menu, X, ChevronDown, Lock, Settings } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 // New Component
 import LandingHero from '@/components/LandingHero';
@@ -220,15 +220,26 @@ export default function Home() {
   };
 
   // --- RENDER LANDING ---
-  if (!isAuthenticated && !loading) {
-    return <LandingHero />;
-  }
+  // If not authenticated, we show the Hero Banner AT THE TOP, but we still show the store below.
+  // if (!isAuthenticated && !loading) {
+  //   return <LandingHero />;
+  // }
 
   // --- RENDER STORE (LOGGED IN) ---
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
+
+      {/* Public Banner - Only for non-logged users */}
+      {!isAuthenticated && !loading && (
+        <div className="bg-gray-900 text-white">
+          <LandingHero />
+        </div>
+      )}
+
       {/* Top Bar Industrial */}
-      <div className="bg-[#FFC107] h-1 w-full"></div>
+      {/* If logged in or scrolling down, this sticky header works. 
+          For public view, maybe we want it sticky too. Keeping as is. */}
+      {isAuthenticated && <div className="bg-[#FFC107] h-1 w-full"></div>}
 
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-20 border-b border-gray-200">
@@ -258,6 +269,14 @@ export default function Home() {
           <div className="flex gap-4 items-center">
 
             <div className="h-8 w-px bg-gray-300 mx-2 hidden sm:block"></div>
+
+            {/* Admin Link - Only for admins */}
+            {Cookies.get('user_role') === 'ADMIN' && (
+              <a href={`${apiEndpoints.backend}/admin/`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center text-gray-600 hover:text-red-600 transition group mr-2">
+                <Settings className="w-5 h-5 group-hover:rotate-90 transition" />
+                <span className="text-[10px] font-bold uppercase mt-1">Admin</span>
+              </a>
+            )}
 
             <Link href="/dashboard" className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition group">
               <Package className="w-5 h-5 group-hover:scale-110 transition" />
@@ -448,25 +467,37 @@ export default function Home() {
 
                       <p className="text-xs text-gray-500 uppercase mb-4 truncate">{product.brand} {product.category_details?.name && `| ${product.category_details.name}`}</p>
 
-                      <div className="flex items-end justify-between mt-2">
+                      <div className="flex items-end justify-between mt-2 min-h-[44px]">
                         <div>
-                          <span className="text-xs text-gray-400 uppercase block mb-0.5">Tu Precio</span>
-                          {product.discount_percent > 0 ? (
+                          {isAuthenticated ? (
+                            /* --- AUTHENTICATED PRICE --- */
                             <>
-                              <span className="text-xl font-black text-green-700 tracking-tight">
-                                ${parseFloat(product.discounted_price).toLocaleString()}
-                              </span>
-                              <span className="text-xs text-gray-400 line-through ml-2">
-                                ${parseFloat(product.base_price).toLocaleString()}
-                              </span>
+                              <span className="text-xs text-gray-400 uppercase block mb-0.5">Tu Precio</span>
+                              {product.discount_percent > 0 ? (
+                                <>
+                                  <span className="text-xl font-black text-green-700 tracking-tight">
+                                    ${parseFloat(product.discounted_price).toLocaleString()}
+                                  </span>
+                                  <span className="text-xs text-gray-400 line-through ml-2">
+                                    ${parseFloat(product.base_price).toLocaleString()}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xl font-black text-gray-900 tracking-tight">
+                                  ${parseFloat(product.base_price).toLocaleString()}
+                                </span>
+                              )}
                             </>
                           ) : (
-                            <span className="text-xl font-black text-gray-900 tracking-tight">
-                              ${parseFloat(product.base_price).toLocaleString()}
-                            </span>
+                            /* --- PUBLIC VIEW (NO PRICE) --- */
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-400 uppercase">Precio Mayorista</span>
+                              <span className="text-sm font-bold text-gray-600 italic">Inicia Sesión</span>
+                            </div>
                           )}
+
                         </div>
-                        {product.discount_percent > 0 && (
+                        {isAuthenticated && product.discount_percent > 0 && (
                           <span className="text-xs font-bold text-white bg-red-600 px-2 py-1 rounded">
                             -{product.discount_percent}%
                           </span>
@@ -475,17 +506,23 @@ export default function Home() {
                     </div>
 
                     {/* Action Button - Full Width on Mobile, Icon on Desktop */}
-                    <button
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock <= 0}
-                      className="w-full bg-gray-50 hover:bg-[#FFC107] hover:text-gray-900 text-gray-600 font-bold text-sm py-3 border-t border-gray-100 transition-colors flex items-center justify-center gap-2 group-disabled:opacity-50 group-disabled:cursor-not-allowed uppercase"
-                    >
-                      {product.stock > 0 ? (
-                        <>
-                          Agregar <ShoppingCart className="w-4 h-4" />
-                        </>
-                      ) : 'Sin Stock'}
-                    </button>
+                    {isAuthenticated ? (
+                      <button
+                        onClick={() => addToCart(product)}
+                        disabled={product.stock <= 0}
+                        className="w-full bg-gray-50 hover:bg-[#FFC107] hover:text-gray-900 text-gray-600 font-bold text-sm py-3 border-t border-gray-100 transition-colors flex items-center justify-center gap-2 group-disabled:opacity-50 group-disabled:cursor-not-allowed uppercase"
+                      >
+                        {product.stock > 0 ? (
+                          <>
+                            Agregar <ShoppingCart className="w-4 h-4" />
+                          </>
+                        ) : 'Sin Stock'}
+                      </button>
+                    ) : (
+                      <Link href="/login" className="w-full bg-gray-900 text-white hover:bg-black font-bold text-sm py-3 transition-colors flex items-center justify-center gap-2 uppercase">
+                        Ver Precio <Lock className="w-3 h-3 text-[#FFC107]" />
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>

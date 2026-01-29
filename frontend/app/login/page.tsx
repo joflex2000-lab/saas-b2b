@@ -30,19 +30,27 @@ export default function LoginPage() {
             Cookies.set('access_token', access);
             Cookies.set('refresh_token', refresh);
 
-            // Decodificar token para obtener info del usuario (básico)
-            // El token JWT contiene info en el payload
+            // Fetch full user profile to get Role
             try {
-                const payload = JSON.parse(atob(access.split('.')[1]));
-                // Si el usuario es staff/admin, redirigir a página de elección
-                if (payload.is_staff || payload.is_superuser) {
+                const meRes = await axios.get(apiEndpoints.userProfile, {
+                    headers: { Authorization: `Bearer ${access}` }
+                });
+
+                const { role, username, is_staff, is_superuser } = meRes.data;
+                Cookies.set('user_role', role || 'CLIENT');
+                Cookies.set('username', username || '');
+
+                // Si el usuario es staff/admin por DB o Token, redirigir
+                if (role === 'ADMIN' || is_staff || is_superuser) {
                     router.push('/admin-choice');
                     return;
                 }
-            } catch {
-                // Si no podemos decodificar, ir a home normal
+            } catch (err) {
+                console.error("Error fetching profile:", err);
+                // Fallback decode if API fails (unlikely)
             }
 
+            // Redirect to home (which now handles both public and private)
             router.push('/');
 
         } catch (err: any) {

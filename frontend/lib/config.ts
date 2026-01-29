@@ -4,6 +4,9 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:30
 
 // Helper to build API endpoints
 export const apiEndpoints = {
+    // Base
+    backend: API_URL,
+
     // Auth
     token: `${API_URL}/api/token/`,
     tokenRefresh: `${API_URL}/api/token/refresh/`,
