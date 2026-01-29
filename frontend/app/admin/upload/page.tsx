@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { Upload, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { apiEndpoints } from '@/lib/config';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -41,7 +42,7 @@ export default function UploadPage() {
     }
 
     try {
-      const res = await axios.post('http://localhost:8000/api/products/import/', formData, {
+      const res = await axios.post(apiEndpoints.productImport, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

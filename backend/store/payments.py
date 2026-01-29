@@ -19,6 +19,10 @@ class PaymentService:
                 "unit_price": float(item.unit_price_applied)
             })
 
+        # URLs dinámicas desde settings
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+
         # Preference Data
         preference_data = {
             "items": items,
@@ -29,13 +33,13 @@ class PaymentService:
                 # "identification": { "type": "CUIT", "number": ... } 
             },
             "back_urls": {
-                "success": f"http://localhost:3000/dashboard?status=success&order={order.id}",
-                "failure": f"http://localhost:3000/dashboard?status=failure&order={order.id}",
-                "pending": f"http://localhost:3000/dashboard?status=pending&order={order.id}"
+                "success": f"{frontend_url}/dashboard?status=success&order={order.id}",
+                "failure": f"{frontend_url}/dashboard?status=failure&order={order.id}",
+                "pending": f"{frontend_url}/dashboard?status=pending&order={order.id}"
             },
             "auto_return": "approved",
             "external_reference": str(order.id),
-            "notification_url": "https://midominio.com/api/webhooks/mercadopago/", # Ngrok for dev
+            "notification_url": f"{site_url}/api/webhooks/mercadopago/",
             "statement_descriptor": "SAAS B2B"
         }
 
@@ -54,3 +58,4 @@ class PaymentService:
         # Fetch status from MP
         payment_info = self.sdk.payment().get(payment_id)
         return payment_info["response"]
+

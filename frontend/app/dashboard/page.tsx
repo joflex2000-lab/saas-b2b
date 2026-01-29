@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Package, Clock, CheckCircle, XCircle, FileText, CreditCard } from 'lucide-react';
+import { apiEndpoints } from '@/lib/config';
 
 interface OrderItem {
     product_name: string;
@@ -36,11 +37,13 @@ export default function Dashboard() {
         if (status === 'success') alert("¡Pago Aprobado!");
         if (status === 'failure') alert("El pago falló.");
 
-        axios.get('http://localhost:8000/api/orders/my-orders/', {
+        axios.get(apiEndpoints.myOrders, {
             headers: { Authorization: `Bearer ${token}` }
         })
             .then(res => {
-                setOrders(res.data);
+                // Handle pagination if present, or fallback to array
+                const data = res.data.results ? res.data.results : res.data;
+                setOrders(data);
                 setLoading(false);
             })
             .catch(err => {
@@ -49,10 +52,10 @@ export default function Dashboard() {
             });
     }, [router, searchParams]);
 
-    const downloadInvoice = async (orderId: number) => {
+    const downloadReport = async (orderId: number) => {
         const token = Cookies.get('access_token');
         try {
-            const res = await axios.get(`http://localhost:8000/api/orders/${orderId}/invoice/`, {
+            const res = await axios.get(apiEndpoints.orderInvoice(orderId), {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
@@ -60,20 +63,20 @@ export default function Dashboard() {
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `factura_${orderId}.pdf`);
+            link.setAttribute('download', `informe_pedido_${orderId}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.parentNode?.removeChild(link);
 
         } catch (err) {
-            alert("No se pudo generar la factura.");
+            alert("No se pudo generar el informe del pedido.");
         }
     };
 
     const payOrder = async (orderId: number) => {
         const token = Cookies.get('access_token');
         try {
-            const res = await axios.post('http://localhost:8000/api/payments/checkout/',
+            const res = await axios.post(apiEndpoints.paymentCheckout,
                 { order_id: orderId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -154,12 +157,15 @@ export default function Dashboard() {
 
                                     <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
                                         <div className="flex gap-2">
-                                            <button
-                                                onClick={() => downloadInvoice(order.id)}
-                                                className="text-sm border bg-white hover:bg-gray-100 px-3 py-2 rounded flex items-center gap-2 transition"
-                                            >
-                                                <FileText className="w-4 h-4 text-gray-600" /> Factura
-                                            </button>
+                                            {/* Solo mostrar botón de Informe si el pedido está CONFIRMADO, PAGADO o ENVIADO */}
+                                            {['CONFIRMED', 'PAID', 'SHIPPED'].includes(order.status) && (
+                                                <button
+                                                    onClick={() => downloadReport(order.id)}
+                                                    className="text-sm border bg-white hover:bg-gray-100 px-3 py-2 rounded flex items-center gap-2 transition"
+                                                >
+                                                    <FileText className="w-4 h-4 text-gray-600" /> Informe
+                                                </button>
+                                            )}
 
                                             {order.status === 'PENDING' && (
                                                 <button

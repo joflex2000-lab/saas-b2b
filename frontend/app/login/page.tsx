@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { Lock, User } from 'lucide-react';
+import { apiEndpoints } from '@/lib/config';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -19,18 +20,29 @@ export default function LoginPage() {
         setError('');
 
         try {
-            // Intenta conectar al backend (asume backend en puerto 8000)
-            const res = await axios.post('http://localhost:8000/api/token/', {
-                username: email, // Django usa 'username' por defecto, aunque sea email
+            // Obtener token
+            const res = await axios.post(apiEndpoints.token, {
+                username: email,
                 password: password,
             });
 
-            // Si funciona, guardamos el token
             const { access, refresh } = res.data;
             Cookies.set('access_token', access);
             Cookies.set('refresh_token', refresh);
 
-            // Redirigir al home
+            // Decodificar token para obtener info del usuario (básico)
+            // El token JWT contiene info en el payload
+            try {
+                const payload = JSON.parse(atob(access.split('.')[1]));
+                // Si el usuario es staff/admin, redirigir a página de elección
+                if (payload.is_staff || payload.is_superuser) {
+                    router.push('/admin-choice');
+                    return;
+                }
+            } catch {
+                // Si no podemos decodificar, ir a home normal
+            }
+
             router.push('/');
 
         } catch (err: any) {

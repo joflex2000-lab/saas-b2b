@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b_uwtcs(8-c6=d^)18f(f#(tlvgr5#be!jnzo3$5rt_2xoj2c5'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-b_uwtcs(8-c6=d^)18f(f#(tlvgr5#be!jnzo3$5rt_2xoj2c5')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     # Third party apps
     'rest_framework',
     'corsheaders',
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # CORS First
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,16 +82,23 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Default local database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'saas_db',
-        'USER': 'postgres',      # Default pgadmin user is usually postgres
-        'PASSWORD': 'admin',     # User provided password
+        'USER': 'postgres',
+        'PASSWORD': 'admin',
         'HOST': 'localhost',
         'PORT': '5432',
     }
 }
+
+# Override with DATABASE_URL if available (for Railway/Heroku)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
 
 
 # Password validation
@@ -126,27 +136,52 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise for serving static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Custom User Model
 AUTH_USER_MODEL = 'store.CustomUser'
 
-# CORS Settings (Allow Next.js frontend)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+# CORS Settings - Allow frontend origins
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS', 
+    'http://localhost:3000'
+).split(',')
 
-# REST Framework settings (optional but good for future)
+# Also allow credentials for auth
+CORS_ALLOW_CREDENTIALS = True
+
+# REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# Simple JWT Configuration - Include user role info in token
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'TOKEN_OBTAIN_SERIALIZER': 'store.jwt_serializers.CustomTokenObtainPairSerializer',
 }
 
 # Mercado Pago
-MERCADOPAGO_ACCESS_TOKEN = "TEST-8308432130325493-012712-42111244433221-1647461423" # TEST TOKEN
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', 'TEST-8308432130325493-012712-42111244433221-1647461423')
+
+# Site URLs
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 # Mercado Libre Integration
-ML_CLIENT_ID = "123456789" # Placeholder
-ML_CLIENT_SECRET = "secret_placeholder" # Placeholder
-ML_REDIRECT_URI = "http://localhost:3000/admin/integrations/callback" # Frontend Callback
+ML_CLIENT_ID = os.environ.get('ML_CLIENT_ID', '123456789')
+ML_CLIENT_SECRET = os.environ.get('ML_CLIENT_SECRET', 'secret_placeholder')
+ML_REDIRECT_URI = os.environ.get('ML_REDIRECT_URI', 'http://localhost:3000/admin/integrations/callback')
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

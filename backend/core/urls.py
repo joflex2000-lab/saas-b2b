@@ -5,9 +5,20 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from store.views import (
-    ProductListView, OrderCreateView, OrderListView, ImportProductsView, 
-    GenerateInvoiceView, PaymentCheckoutView, PaymentWebhookView, ExportDataView
+    ProductListView, OrderCreateView, OrderListView, 
+    GenerateInvoiceView, PaymentCheckoutView, PaymentWebhookView, ExportDataView,
+    AdminProductViewSet, AdminUserViewSet, AdminOrderViewSet, 
+    CategoryTreeView, AdminCategoryViewSet, DeleteAllClientsView,
+    ClientImportPreviewView, ClientImportConfirmView,
+    PublicProductListView, PublicCategoryTreeView, UserProfileView
 )
+from rest_framework.routers import DefaultRouter
+
+router = DefaultRouter()
+router.register(r'api/admin/products', AdminProductViewSet, basename='admin_products')
+router.register(r'api/admin/users', AdminUserViewSet, basename='admin_users')
+router.register(r'api/admin/orders', AdminOrderViewSet, basename='admin_orders')
+router.register(r'api/admin/categories', AdminCategoryViewSet, basename='admin_categories')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,9 +26,20 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Store Endpoints
+    # Public Endpoints (No auth required)
+    path('api/public/products/', PublicProductListView.as_view(), name='public_products'),
+    path('api/public/categories/', PublicCategoryTreeView.as_view(), name='public_categories'),
+    
+    # User Profile (Authenticated)
+    path('api/me/', UserProfileView.as_view(), name='user_profile'),
+    
+    # Store Endpoints (Authenticated)
+    path('api/categories/', CategoryTreeView.as_view(), name='category_tree'),
     path('api/products/', ProductListView.as_view(), name='product_list'),
-    path('api/products/import/', ImportProductsView.as_view(), name='product_import'),
+    path('api/admin/users/import/preview/', ClientImportPreviewView.as_view(), name='client_import_preview'),
+    path('api/admin/users/import/confirm/', ClientImportConfirmView.as_view(), name='client_import_confirm'),
+
+    path('api/admin/users/delete-all/', DeleteAllClientsView.as_view(), name='delete_all_clients'),
     path('api/orders/', OrderCreateView.as_view(), name='order_create'),
     path('api/orders/my-orders/', OrderListView.as_view(), name='my_orders'),
     path('api/orders/<int:pk>/invoice/', GenerateInvoiceView.as_view(), name='order_invoice'),
@@ -25,4 +47,8 @@ urlpatterns = [
     path('api/webhooks/mercadopago/', PaymentWebhookView.as_view(), name='payment_webhook'),
     path('api/export/<str:type_>/', ExportDataView.as_view(), name='export_data'),
     path('api/integrations/', include('integrations.urls')),
+    
+    # Router URLs
+    path('', include(router.urls)),
 ]
+

@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { FileSpreadsheet, Download, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { API_URL } from '@/lib/config';
 
 export default function ReportsPage() {
     const router = useRouter();
@@ -15,7 +16,7 @@ export default function ReportsPage() {
         if (!token) return router.push('/login');
 
         try {
-            const res = await axios.get(`http://localhost:8000/api/export/${type}/`, {
+            const res = await axios.get(`${API_URL}/api/export/${type}/`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob',
             });

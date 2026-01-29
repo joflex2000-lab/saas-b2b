@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { apiEndpoints } from '@/lib/config';
 
 export default function MLCallbackPage() {
     const router = useRouter();
@@ -15,7 +16,7 @@ export default function MLCallbackPage() {
         const token = Cookies.get('access_token');
 
         if (code && token) {
-            axios.post('http://localhost:8000/api/integrations/ml/callback/',
+            axios.post(apiEndpoints.mlCallback,
                 { code },
                 { headers: { Authorization: `Bearer ${token}` } }
             )

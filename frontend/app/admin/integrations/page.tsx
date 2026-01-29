@@ -4,6 +4,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { Link2, ShoppingBag } from 'lucide-react';
+import { apiEndpoints } from '@/lib/config';
 
 export default function IntegrationsPage() {
     const [loading, setLoading] = useState(false);
@@ -12,7 +13,7 @@ export default function IntegrationsPage() {
         setLoading(true);
         const token = Cookies.get('access_token');
         try {
-            const res = await axios.get('http://localhost:8000/api/integrations/ml/auth-url/', {
+            const res = await axios.get(apiEndpoints.mlAuthUrl, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             window.location.href = res.data.url;

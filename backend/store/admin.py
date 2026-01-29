@@ -18,6 +18,9 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
+    list_per_page = 20 # Limit to 20 items per page
+    list_select_related = ('category',) # Optimize SQL query for FK
+    show_full_result_count = False # Avoid expensive COUNT(*) query
     
     def status_colored(self, obj):
         return "Activo" if obj.is_active else "Inactivo"

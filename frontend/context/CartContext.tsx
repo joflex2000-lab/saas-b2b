@@ -46,11 +46,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
                         : item
                 );
             }
+            // Usar discounted_price si existe, sino base_price
+            const finalPrice = product.discounted_price
+                ? parseFloat(product.discounted_price)
+                : parseFloat(product.base_price);
             return [...prev, {
                 id: product.id,
                 sku: product.sku,
                 name: product.name,
-                price: parseFloat(product.base_price),
+                price: finalPrice,
                 quantity: 1
             }];
         });

@@ -7,6 +7,7 @@ import Cookies from 'js-cookie';
 import { useState } from 'react';
 import { Trash2, ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { apiEndpoints } from '@/lib/config';
 
 export default function CartPage() {
     const { items, removeFromCart, clearCart, total } = useCart();
@@ -41,7 +42,7 @@ export default function CartPage() {
             // Necesitaremos ajustar el Backend para recibir la creación de items.
             // Por ahora simulamos el envio.
 
-            await axios.post('http://localhost:8000/api/orders/', payload, {
+            await axios.post(apiEndpoints.orders, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
