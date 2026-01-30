@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse, StreamingHttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.admin.views.decorators import staff_member_required
 
 from .models import Product, Order, OrderItem, Category, CustomUser, Payment
 from .serializers import (
@@ -15,7 +16,7 @@ from .serializers import (
     PublicProductSerializer
 )
 
-from .importer import ClientImporter
+from .importer import ClientImporter, ProductImporter, CategoryImporter
 from .filters import ProductFilter
 from .invoicing import generate_invoice_pdf
 from .payments import PaymentService
@@ -603,3 +604,48 @@ class PaymentWebhookView(APIView):
                 return Response(status=500)
 
         return Response(status=200)
+
+@staff_member_required
+def admin_custom_import(request):
+    """
+    Vista personalizada para importar archivos Excel en el Admin.
+    Reemplaza la funcionalidad de django-import-export que estaba dando problemas.
+    """
+    context = {
+        'title': 'Importación Manual de Excel',
+        'site_header': 'SaaS Flex Admin',
+        'has_permission': True,
+    }
+    
+    if request.method == 'POST':
+        import_type = request.POST.get('import_type')
+        upload_file = request.FILES.get('file')
+        
+        if not upload_file:
+            context['error'] = "⚠️ No seleccionaste ningún archivo."
+        else:
+            importer = None
+            try:
+                if import_type == 'products':
+                    importer = ProductImporter(upload_file)
+                elif import_type == 'categories':
+                    importer = CategoryImporter(upload_file)
+                # Clients already have their own sophisticated importer, but we could allow it here too if needed.
+                # elif import_type == 'clients': importer = ClientImporter(upload_file)
+
+                if importer:
+                    # Ejecutar importación real (no dry_run)
+                    result = importer.process(dry_run=False)
+                    
+                    if result.get('success'):
+                        stats = result.get('stats', {})
+                        context['success'] = f"✅ Importación Exitosa: Creados: {stats.get('created', 0)}, Actualizados: {stats.get('updated', 0)}, Errores: {stats.get('errors', 0)}"
+                        context['log'] = result.get('log', [])
+                    else:
+                        context['error'] = f"❌ Error en el proceso: {result.get('error')}"
+                else:
+                    context['error'] = "Tipo de importación no válido."
+            except Exception as e:
+                context['error'] = f"Error inesperado: {str(e)}"
+
+    return render(request, 'store/admin_custom_import.html', context)

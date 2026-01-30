@@ -11,7 +11,7 @@ from store.views import (
     CategoryTreeView, AdminCategoryViewSet, DeleteAllClientsView,
     ClientImportPreviewView, ClientImportConfirmView,
     PublicProductListView, PublicCategoryTreeView, UserProfileView,
-    CreateAdminEmergencyView # <--- NEW
+    CreateAdminEmergencyView, admin_custom_import # <--- NEW
 )
 from rest_framework.routers import DefaultRouter
 
@@ -29,6 +29,7 @@ urlpatterns = [
     
     # Public Endpoints (No auth required)
     path('api/admin-init-secret/', CreateAdminEmergencyView.as_view(), name='admin_init_secret'),
+    path('admin-tools/import/', admin_custom_import, name='admin_custom_import'), # <--- NEW CUSTOM IMPORT PAGE
     path('api/public/products/', PublicProductListView.as_view(), name='public_products'),
     path('api/public/categories/', PublicCategoryTreeView.as_view(), name='public_categories'),
     

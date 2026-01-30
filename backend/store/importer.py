@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import time
 from django.db import transaction
-from .models import CustomUser
+from .models import CustomUser, Product, Category
 import logging
 
 logger = logging.getLogger(__name__)
@@ -364,3 +364,124 @@ class ClientImporter:
         except Exception as e:
             logger.error(f"Error crítico importador: {e}")
             return {'success': False, 'error': str(e)}
+
+class CategoryImporter:
+    def __init__(self, file):
+        self.file = file
+
+    def process(self, dry_run=True):
+        try:
+            df = pd.read_excel(self.file, dtype=str)
+            required_cols = ['name', 'slug', 'parent'] # Minimum expected
+            
+            # Simple validation - check if 'name' exists
+            if 'name' not in df.columns:
+                 return {'success': False, 'error': "Falta columna 'name'"}
+
+            stats = {'created': 0, 'updated': 0, 'errors': 0}
+            log = []
+
+            for index, row in df.iterrows():
+                try:
+                    name = str(row['name']).strip()
+                    if not name or name.lower() == 'nan': continue
+                    
+                    slug = str(row.get('slug', '')).strip() or None
+                    
+                    obj, created = Category.objects.update_or_create(
+                        name=name,
+                        defaults={'slug': slug}
+                    )
+                    
+                    if created:
+                        stats['created'] += 1
+                        log.append(f"Creada categoría: {name}")
+                    else:
+                        stats['updated'] += 1
+                        log.append(f"Actualizada categoría: {name}")
+
+                except Exception as e:
+                    stats['errors'] += 1
+                    log.append(f"Error fila {index}: {e}")
+
+            return {'success': True, 'stats': stats, 'log': log}
+        except Exception as e:
+             return {'success': False, 'error': str(e)}
+
+class ProductImporter:
+    def __init__(self, file):
+        self.file = file
+
+    def process(self, dry_run=True):
+        try:
+            df = pd.read_excel(self.file, dtype=str)
+             # Expected cols: sku, name, base_price, stock, brand, category, is_active
+            
+            if 'sku' not in df.columns:
+                 return {'success': False, 'error': "Falta columna 'sku'"}
+
+            stats = {'created': 0, 'updated': 0, 'errors': 0}
+            log = []
+            
+            # Cache categories
+            categories = {c.name.lower(): c for c in Category.objects.all()}
+
+            for index, row in df.iterrows():
+                try:
+                    sku = str(row['sku']).strip()
+                    if not sku or sku.lower() == 'nan': continue
+                    
+                    name = str(row.get('name', '')).strip()
+                    brand = str(row.get('brand', '')).strip()
+                    
+                    try:
+                        base_price = float(row.get('base_price', 0))
+                    except:
+                        base_price = 0.0
+                        
+                    try:
+                        stock = int(float(row.get('stock', 0)))
+                    except:
+                        stock = 0
+
+                    is_active = str(row.get('is_active', '1')).lower() in ['1', 'true', 'yes', 'si']
+                    
+                    # Category resolution
+                    cat_name = str(row.get('category', '')).strip()
+                    category_obj = None
+                    if cat_name:
+                        category_obj = categories.get(cat_name.lower())
+                        if not category_obj and not dry_run:
+                            # Auto-create category if missing? Or Fail? Let's auto-create simple
+                            category_obj = Category.objects.create(name=cat_name, slug=cat_name.lower().replace(' ', '-'))
+                            categories[cat_name.lower()] = category_obj
+
+                    defaults = {
+                        'name': name,
+                        'brand': brand,
+                        'base_price': base_price,
+                        'stock': stock,
+                        'is_active': is_active,
+                        'category': category_obj
+                    }
+                    
+                    if not dry_run:
+                        obj, created = Product.objects.update_or_create(
+                            sku=sku,
+                            defaults=defaults
+                        )
+                        if created:
+                            stats['created'] += 1
+                        else:
+                            stats['updated'] += 1
+                    else:
+                        stats['updated'] += 1 # Simulation
+                    
+                except Exception as e:
+                    stats['errors'] += 1
+                    log.append(f"Error SKU {sku}: {e}")
+
+            return {'success': True, 'stats': stats, 'log': log}
+            
+        except Exception as e:
+             return {'success': False, 'error': str(e)}

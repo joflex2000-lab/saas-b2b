@@ -1,0 +1,55 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="padding: 20px; background: white; border: 1px solid #ccc; max-width: 600px;">
+        <h2>📥 Importación Manual de Datos</h2>
+        <p>Sube tu Excel de Productos o Categorías aquí.</p>
+        
+        {% if error %}
+            <p class="errornote" style="color: red; font-weight: bold; background: #ffeeee; padding: 10px;">{{ error }}</p>
+        {% endif %}
+        
+        {% if success %}
+            <div class="messagelist" style="color: green; font-weight: bold; background: #eeffee; padding: 10px; margin-bottom: 15px;">
+                {{ success }}
+            </div>
+        {% endif %}
+
+        {% if log %}
+            <div style="background: #f8f8f8; padding: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #eee;">
+                <h3>📜 Detalles del proceso:</h3>
+                <ul style="list-style-type: disc; margin-left: 20px;">
+                    {% for msg in log %}
+                        <li style="font-family: monospace; font-size: 12px;">{{ msg }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <fieldset class="module aligned" style="border: none; margin-bottom: 20px;">
+                <div class="form-row" style="margin-bottom: 15px;">
+                    <label for="import_type" style="display: block; font-weight: bold; margin-bottom: 5px;">1. ¿Qué vas a importar?</label>
+                    <select name="import_type" id="import_type" required style="padding: 8px; width: 100%;">
+                        <option value="" selected disabled>-- Selecciona una opción --</option>
+                        <option value="products">📦 Productos</option>
+                        <option value="categories">🗂️ Categorías</option>
+                    </select>
+                </div>
+                
+                <div class="form-row" style="margin-bottom: 15px;">
+                    <label for="file" style="display: block; font-weight: bold; margin-bottom: 5px;">2. Archivo Excel (.xlsx)</label>
+                    <input type="file" name="file" id="file" accept=".xlsx, .xls" required style="padding: 10px; border: 1px dashed #ccc; width: 100%;">
+                </div>
+            </fieldset>
+            
+            <div class="submit-row">
+                <input type="submit" value="🚀 Subir e Importar" class="default" style="padding: 12px 24px; background: #447e9b; color: white; border: none; cursor: pointer; font-size: 16px; border-radius: 4px;">
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
