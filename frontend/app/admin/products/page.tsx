@@ -44,9 +44,14 @@ export default function AdminProductsPage() {
 
     // Modal states
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null); // Partial allows creation
     const [saving, setSaving] = useState(false);
 
+    // Import Modal State
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<any>(null);
 
     // Filter states
     const [showOnlyActive, setShowOnlyActive] = useState<boolean | null>(null);
@@ -129,43 +134,97 @@ export default function AdminProductsPage() {
         setShowEditModal(true);
     };
 
+    const openCreateModal = () => {
+        setEditingProduct({
+            is_active: true,
+            base_price: 0,
+            stock: 0,
+            categories: []
+        });
+        setShowEditModal(true);
+    };
+
     const saveProduct = async () => {
         if (!editingProduct) return;
         setSaving(true);
         try {
-            await axios.patch(
-                apiEndpoints.adminProduct(editingProduct.id),
-                {
-                    name: editingProduct.name,
-                    description: editingProduct.description,
-                    base_price: editingProduct.base_price,
-                    stock: editingProduct.stock,
-                    brand: editingProduct.brand,
-                    supplier: editingProduct.supplier || '',
-                    is_active: editingProduct.is_active,
-                    category_ids: editingProduct.categories // Send assignments
-                },
-                { headers: { Authorization: `Bearer ${getToken()}` } }
-            );
-            // Update local state
-            setProducts(products.map(p =>
-                p.id === editingProduct.id ? editingProduct : p
-            ));
+            const payload = {
+                name: editingProduct.name,
+                description: editingProduct.description,
+                base_price: editingProduct.base_price,
+                stock: editingProduct.stock,
+                brand: editingProduct.brand,
+                supplier: editingProduct.supplier || '',
+                is_active: editingProduct.is_active,
+                category_ids: editingProduct.categories, // Send assignments
+                sku: editingProduct.sku // Required for creation
+            };
+
+            if (editingProduct.id) {
+                // UPDATE
+                await axios.patch(
+                    apiEndpoints.adminProduct(editingProduct.id),
+                    payload,
+                    { headers: { Authorization: `Bearer ${getToken()}` } }
+                );
+                // Optimistic update (or refetch)
+                fetchProducts();
+            } else {
+                // CREATE
+                await axios.post(
+                    apiEndpoints.adminProducts,
+                    payload,
+                    { headers: { Authorization: `Bearer ${getToken()}` } }
+                );
+                fetchProducts();
+            }
+
             setShowEditModal(false);
-            alert('Producto actualizado correctamente');
-        } catch (err) {
+            // alert('Producto guardado correctamente');
+        } catch (err: any) {
             console.error('Error saving product:', err);
-            alert('Error al guardar producto');
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Error al guardar';
+            alert(`Error: ${msg}`);
         } finally {
             setSaving(false);
         }
     };
 
+    const handleImport = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importFile) return;
+
+        setImporting(true);
+        setImportResult(null);
+
+        const formData = new FormData();
+        formData.append('file', importFile);
+
+        try {
+            const res = await axios.post(apiEndpoints.productImportAPI, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${getToken()}`
+                }
+            });
+            setImportResult(res.data);
+            if (res.data.success) {
+                fetchProducts(); // Refresh list
+            }
+        } catch (err: any) {
+            console.error('Import Error:', err);
+            setImportResult({ success: false, error: err.message || 'Error de conexión' });
+        } finally {
+            setImporting(false);
+        }
+    };
+
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('es-AR', {
             style: 'currency',
             currency: 'ARS'
-        }).format(amount);
+        }).format(amount || 0);
     };
 
     // Client-side search filter (for current page)
@@ -189,22 +248,18 @@ export default function AdminProductsPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <a
-                        href={apiEndpoints.adminToolsImport}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        onClick={() => setShowImportModal(true)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm uppercase hover:bg-blue-700 transition"
                     >
                         <Save className="w-4 h-4" /> Importar Excel
-                    </a>
-                    <a
-                        href={apiEndpoints.adminProductAdd}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    </button>
+                    <button
+                        onClick={openCreateModal}
                         className="flex items-center gap-2 bg-[#FFC107] text-gray-900 px-4 py-2 rounded font-bold text-sm uppercase hover:bg-yellow-400 transition"
                     >
                         <Plus className="w-4 h-4" /> Nuevo Producto
-                    </a>
+                    </button>
                 </div>
             </div>
 
@@ -398,13 +453,13 @@ export default function AdminProductsPage() {
                 </div>
             </div>
 
-            {/* ==================== EDIT MODAL ==================== */}
+            {/* ==================== CREATE / EDIT MODAL ==================== */}
             {showEditModal && editingProduct && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
                             <h2 className="text-lg font-black text-gray-900 uppercase">
-                                Editar Producto
+                                {editingProduct.id ? 'Editar Producto' : 'Nuevo Producto'}
                             </h2>
                             <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded">
                                 <X className="w-5 h-5 text-gray-500" />
@@ -412,14 +467,16 @@ export default function AdminProductsPage() {
                         </div>
 
                         <div className="p-6 space-y-4">
-                            {/* SKU (read-only) */}
+                            {/* SKU */}
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">SKU</label>
                                 <input
                                     type="text"
-                                    value={editingProduct.sku}
-                                    disabled
-                                    className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-50 text-gray-500"
+                                    value={editingProduct.sku || ''}
+                                    onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
+                                    disabled={!!editingProduct.id} // Disabled only if editing existing
+                                    className={`w-full px-3 py-2 border rounded ${editingProduct.id ? 'bg-gray-50 border-gray-200 text-gray-500' : 'border-gray-300 focus:ring-2 focus:ring-[#FFC107]'}`}
+                                    placeholder="Ej: AB12345"
                                 />
                             </div>
 
@@ -428,9 +485,10 @@ export default function AdminProductsPage() {
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
                                 <input
                                     type="text"
-                                    value={editingProduct.name}
+                                    value={editingProduct.name || ''}
                                     onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#FFC107]"
+                                    placeholder="Nombre del producto"
                                 />
                             </div>
 
@@ -452,7 +510,7 @@ export default function AdminProductsPage() {
                                     <input
                                         type="number"
                                         step="0.01"
-                                        value={editingProduct.base_price}
+                                        value={editingProduct.base_price || 0}
                                         onChange={(e) => setEditingProduct({ ...editingProduct, base_price: parseFloat(e.target.value) })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#FFC107]"
                                     />
@@ -461,7 +519,7 @@ export default function AdminProductsPage() {
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Stock</label>
                                     <input
                                         type="number"
-                                        value={editingProduct.stock}
+                                        value={editingProduct.stock || 0}
                                         onChange={(e) => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#FFC107]"
                                     />
@@ -554,6 +612,87 @@ export default function AdminProductsPage() {
                                 <Save className="w-4 h-4" />
                                 {saving ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== IMPORT MODAL ==================== */}
+            {showImportModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-black text-gray-900 uppercase">Importar Productos</h2>
+                            <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            {!importResult ? (
+                                <form onSubmit={handleImport} className="space-y-4">
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                        <input
+                                            type="file"
+                                            accept=".xlsx, .xls"
+                                            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        <div className="space-y-2">
+                                            <Package className="w-10 h-10 mx-auto text-gray-400" />
+                                            <div className="text-sm font-bold text-gray-700">
+                                                {importFile ? importFile.name : 'Haz clic para seleccionar el Excel'}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Solo archivos .xlsx</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={!importFile || importing}
+                                            className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                                        >
+                                            {importing ? 'Importando...' : 'Subir e Importar'}
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="space-y-4">
+                                    {importResult.success ? (
+                                        <div className="bg-green-50 p-4 rounded border border-green-200 text-green-800">
+                                            <div className="font-bold flex items-center gap-2 mb-2">
+                                                <Check className="w-5 h-5" /> Importación Exitosa
+                                            </div>
+                                            <ul className="text-sm space-y-1 list-disc pl-5">
+                                                <li>Creados: <b>{importResult.stats?.created}</b></li>
+                                                <li>Actualizados: <b>{importResult.stats?.updated}</b></li>
+                                                <li>Errores: <b>{importResult.stats?.errors}</b></li>
+                                            </ul>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-red-50 p-4 rounded border border-red-200 text-red-800">
+                                            <div className="font-bold flex items-center gap-2 mb-2">
+                                                <X className="w-5 h-5" /> Error en Importación
+                                            </div>
+                                            <p className="text-sm">{importResult.error}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="max-h-40 overflow-y-auto bg-gray-100 p-3 rounded text-xs font-mono border border-gray-200">
+                                        {importResult.log?.map((l: string, i: number) => (
+                                            <div key={i}>{l}</div>
+                                        )) || 'Sin detalles.'}
+                                    </div>
+
+                                    <button
+                                        onClick={() => { setImportResult(null); setImportFile(null); }}
+                                        className="w-full bg-gray-200 text-gray-800 font-bold py-2 rounded hover:bg-gray-300 transition"
+                                    >
+                                        Volver / Importar otro
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

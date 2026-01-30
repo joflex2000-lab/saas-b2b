@@ -605,6 +605,26 @@ class PaymentWebhookView(APIView):
 
         return Response(status=200)
 
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
+
+class ProductImportAPIView(APIView):
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, format=None):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=400)
+        
+        importer = ProductImporter(file_obj)
+        result = importer.process(dry_run=False)
+        
+        if result.get('success'):
+            return Response(result)
+        else:
+            return Response({'error': result.get('error')}, status=400)
+
 @staff_member_required
 def admin_custom_import(request):
     """

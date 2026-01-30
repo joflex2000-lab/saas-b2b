@@ -15,9 +15,12 @@ class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
+    list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'is_active']
+    list_editable = ['base_price', 'stock', 'is_active'] # <--- Allows direct editing
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
+    list_per_page = 50
+    save_as = True # Allows "Save as new" (Cloning)
     list_per_page = 20 # Limit to 20 items per page
     list_select_related = ('category',) # Optimize SQL query for FK
     show_full_result_count = False # Avoid expensive COUNT(*) query
