@@ -609,7 +609,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 
 class ProductImportAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]
     parser_classes = [MultiPartParser]
 
     def post(self, request, format=None):
@@ -618,6 +618,23 @@ class ProductImportAPIView(APIView):
             return Response({'error': 'No file provided'}, status=400)
         
         importer = ProductImporter(file_obj)
+        result = importer.process(dry_run=False)
+        
+        if result.get('success'):
+            return Response(result)
+        else:
+            return Response({'error': result.get('error')}, status=400)
+
+class CategoryImportAPIView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, format=None):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=400)
+        
+        importer = CategoryImporter(file_obj)
         result = importer.process(dry_run=False)
         
         if result.get('success'):

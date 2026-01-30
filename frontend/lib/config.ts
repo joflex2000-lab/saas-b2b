@@ -63,4 +63,5 @@ export const apiEndpoints = {
 
     // API Imports
     productImportAPI: `${API_URL}/api/admin/products/import/`,
+    categoryImportAPI: `${API_URL}/api/admin/categories/import/`,
 };

@@ -370,13 +370,25 @@ class CategoryImporter:
         self.file = file
 
     def process(self, dry_run=True):
+        sid = transaction.savepoint()
         try:
             df = pd.read_excel(self.file, dtype=str)
-            required_cols = ['name', 'slug', 'parent'] # Minimum expected
             
-            # Simple validation - check if 'name' exists
+            # Normalizar columnas
+            df.columns = [c.strip().lower() for c in df.columns]
+            
+            # Mapeo de columnas
+            column_mapping = {
+                'nombre': 'name',
+                'categoria': 'name', # In case user puts 'Categoria' as header
+                'slug': 'slug',
+                'orden': 'sort_order',
+                'order': 'sort_order'
+            }
+            df.rename(columns=column_mapping, inplace=True)
+
             if 'name' not in df.columns:
-                 return {'success': False, 'error': "Falta columna 'name'"}
+                 return {'success': False, 'error': "Falta columna 'name' (o 'Nombre')"}
 
             stats = {'created': 0, 'updated': 0, 'errors': 0}
             log = []
@@ -386,27 +398,49 @@ class CategoryImporter:
                     name = str(row['name']).strip()
                     if not name or name.lower() == 'nan': continue
                     
-                    slug = str(row.get('slug', '')).strip() or None
+                    slug = row.get('slug', '')
+                    if pd.isna(slug) or str(slug).lower() == 'nan':
+                        slug = None
+                    else:
+                        slug = str(slug).strip()
+
+                    # Handle sort_order if present
+                    sort_order = 0
+                    if 'sort_order' in row and not pd.isna(row['sort_order']):
+                        try:
+                            sort_order = int(float(row['sort_order']))
+                        except:
+                            pass
+
+                    defaults = {'sort_order': sort_order}
+                    if slug:
+                        defaults['slug'] = slug
                     
                     obj, created = Category.objects.update_or_create(
                         name=name,
-                        defaults={'slug': slug}
+                        defaults=defaults
                     )
                     
                     if created:
                         stats['created'] += 1
-                        log.append(f"Creada categoría: {name}")
+                        log.append(f"Creada: {name}")
                     else:
                         stats['updated'] += 1
-                        log.append(f"Actualizada categoría: {name}")
+                        log.append(f"Actualizada: {name}")
 
                 except Exception as e:
                     stats['errors'] += 1
                     log.append(f"Error fila {index}: {e}")
 
+            if dry_run:
+                transaction.savepoint_rollback(sid)
+            else:
+                transaction.savepoint_commit(sid)
+
             return {'success': True, 'stats': stats, 'log': log}
         except Exception as e:
-             return {'success': False, 'error': str(e)}
+            transaction.savepoint_rollback(sid)
+            return {'success': False, 'error': str(e)}
 
 class ProductImporter:
     def __init__(self, file):

@@ -798,6 +798,93 @@ export default function AdminCategoriesPage() {
                     </div>
                 </div>
             )}
+
+            {/* IMPORT MODAL */}
+            {showImportModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-black text-gray-900 uppercase">Importar Categorías</h2>
+                            <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            {!importResult ? (
+                                <form onSubmit={handleImport} className="space-y-4">
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                        <input
+                                            type="file"
+                                            accept=".xlsx, .xls"
+                                            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        <div className="space-y-2">
+                                            <Package className="w-10 h-10 mx-auto text-gray-400" />
+                                            <div className="text-sm font-bold text-gray-700">
+                                                {importFile ? importFile.name : 'Haz clic para seleccionar el Excel'}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Solo archivos .xlsx</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={!importFile || importing}
+                                            className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                                        >
+                                            {importing ? 'Importando...' : 'Subir e Importar'}
+                                        </button>
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-2 text-center">
+                                        Columnas esperadas: Name (obligatorio), Slug, Order
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="space-y-4">
+                                    {importResult.success ? (
+                                        <div className="bg-green-50 p-4 rounded border border-green-200 text-green-800">
+                                            <div className="font-bold flex items-center gap-2 mb-2">
+                                                <CheckSquare className="w-5 h-5" /> Importación Exitosa
+                                            </div>
+                                            <ul className="text-sm space-y-1 list-disc pl-5">
+                                                <li>Creadas: <b>{importResult.stats?.created}</b></li>
+                                                <li>Actualizadas: <b>{importResult.stats?.updated}</b></li>
+                                                <li>Errores: <b>{importResult.stats?.errors}</b></li>
+                                            </ul>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-red-50 p-4 rounded border border-red-200 text-red-800">
+                                            <div className="font-bold flex items-center gap-2 mb-2">
+                                                <X className="w-5 h-5" /> Error en Importación
+                                            </div>
+                                            <p className="text-sm">{importResult.error}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="max-h-40 overflow-y-auto bg-gray-100 p-3 rounded text-xs font-mono border border-gray-200">
+                                        {importResult.log?.map((l: string, i: number) => (
+                                            <div key={i}>{l}</div>
+                                        )) || 'Sin detalles.'}
+                                    </div>
+
+                                    <button
+                                        onClick={() => { setImportResult(null); setImportFile(null); }}
+                                        className="w-full bg-gray-200 text-gray-800 font-bold py-2 rounded hover:bg-gray-300 transition"
+                                    >
+                                        Volver / Importar otro
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+        </div >
     );
 }
