@@ -391,8 +391,25 @@ export default function AdminCategoriesPage() {
             setShowModal(false);
             fetchCategories();
         } catch (err: any) {
-            console.error('Error saving:', err);
-            const msg = err.response?.data?.parent ? `Error: ${err.response.data.parent[0]}` : 'Error al guardar';
+            console.error('Error saving category:', err.response?.data || err);
+            const errorData = err.response?.data;
+            let msg = 'Error al guardar categoría';
+
+            if (errorData) {
+                if (errorData.parent) msg = `Error en Padre: ${errorData.parent[0]}`;
+                else if (errorData.name) msg = `Error en Nombre: ${errorData.name[0]}`;
+                else if (errorData.slug) msg = `Error en Slug: ${errorData.slug[0]}`;
+                else if (errorData.non_field_errors) {
+                    const nfe = errorData.non_field_errors[0];
+                    if (nfe.includes('unique') || nfe.includes('único')) {
+                        msg = 'Ya existe una categoría con este nombre en esta sección.';
+                    } else {
+                        msg = nfe;
+                    }
+                }
+                else if (errorData.detail) msg = errorData.detail;
+                else msg = JSON.stringify(errorData);
+            }
             alert(msg);
         } finally {
             setSaving(false);
