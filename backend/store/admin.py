@@ -12,11 +12,13 @@ class CustomUserAdmin(ImportExportMixin, UserAdmin):
     )
 
 class CategoryAdmin(ImportExportModelAdmin):
+    change_list_template = 'admin/import_export/change_list_import_export.html'
     list_display = ['name', 'slug', 'parent']
     search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
 class ProductAdmin(ImportExportModelAdmin):
+    change_list_template = 'admin/import_export/change_list_import_export.html'
     list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
