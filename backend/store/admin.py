@@ -1,4 +1,7 @@
+from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser, Product, Order, OrderItem, Category
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
