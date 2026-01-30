@@ -248,6 +248,7 @@ class AdminCategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('sort_order', 'name')
     serializer_class = AdminCategorySerializer
     permission_classes = [permissions.IsAdminUser]
+    pagination_class = None  # Return all categories for client-side tree building
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'slug']
     
