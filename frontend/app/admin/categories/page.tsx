@@ -72,6 +72,12 @@ export default function AdminCategoriesPage() {
     const [assignAllMatching, setAssignAllMatching] = useState(false);
     const [totalResults, setTotalResults] = useState(0);
 
+    // Import Modal State
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<any>(null);
+
     const getToken = () => Cookies.get('access_token');
 
     const fetchCategories = async () => {
@@ -210,6 +216,35 @@ export default function AdminCategoriesPage() {
             alert('Error al asignar productos');
         } finally {
             setAssigning(false);
+        }
+    };
+
+    const handleImport = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importFile) return;
+
+        setImporting(true);
+        setImportResult(null);
+
+        const formData = new FormData();
+        formData.append('file', importFile);
+
+        try {
+            const res = await axios.post(apiEndpoints.categoryImportAPI, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${getToken()}`
+                }
+            });
+            setImportResult(res.data);
+            if (res.data.success) {
+                fetchCategories(); // Refresh list
+            }
+        } catch (err: any) {
+            console.error('Import Error:', err);
+            setImportResult({ success: false, error: err.message || 'Error de conexión' });
+        } finally {
+            setImporting(false);
         }
     };
 
@@ -391,12 +426,21 @@ export default function AdminCategoriesPage() {
                         Gestión de árbol de categorías para el catálogo
                     </p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded font-bold text-sm uppercase hover:bg-black transition"
-                >
-                    <Plus className="w-4 h-4" /> Nueva Categoría
-                </button>
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowImportModal(true)}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm uppercase hover:bg-blue-700 transition"
+                    >
+                        <Save className="w-4 h-4" /> Importar Excel
+                    </button>
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded font-bold text-sm uppercase hover:bg-black transition"
+                    >
+                        <Plus className="w-4 h-4" /> Nueva Categoría
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-sm">
@@ -513,378 +557,384 @@ export default function AdminCategoriesPage() {
             </div>
 
             {/* MODAL */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                            <h3 className="font-black text-gray-900 uppercase">
-                                {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
-                            </h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            {/* Name */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
-                                <input
-                                    type="text"
-                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] focus:border-transparent outline-none"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Ej. Electrónica"
-                                />
+            {
+                showModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                                <h3 className="font-black text-gray-900 uppercase">
+                                    {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+                                </h3>
+                                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            {/* Parent */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Categoría Padre</label>
-                                <select
-                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] outline-none bg-white"
-                                    value={formData.parent}
-                                    onChange={(e) => setFormData({ ...formData, parent: e.target.value === '' ? '' : Number(e.target.value) })}
-                                >
-                                    <option value="">(Ninguna - Raíz)</option>
-                                    {getParentOptions().map(cat => (
-                                        <option key={cat.id} value={cat.id}>
-                                            {/* Visual indentation in select using non-breaking spaces */}
-                                            {'\u00A0\u00A0'.repeat(cat.depth || 0)} {cat.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="text-[10px] text-gray-400 mt-1">Selecciona para hacer subcategoría. No puedes elegir descendientes.</p>
-                            </div>
-
-                            <div className="flex gap-4">
-                                {/* Sort Order */}
-                                <div className="flex-1">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Orden</label>
+                            <div className="p-6 space-y-4">
+                                {/* Name */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
                                     <input
-                                        type="number"
-                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] outline-none"
-                                        value={formData.sort_order}
-                                        onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
+                                        type="text"
+                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] focus:border-transparent outline-none"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="Ej. Electrónica"
                                     />
-                                    <p className="text-[10px] text-gray-400 mt-1">Define la posición en el menú (1 = Primero).</p>
                                 </div>
 
-                                {/* Active Toggle */}
-                                <div className="flex-1 flex flex-col justify-end">
-                                    <label className="flex items-center cursor-pointer gap-2 select-none mb-2">
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only"
-                                                checked={formData.is_active}
-                                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                            />
-                                            <div className={`w-10 h-6 bg-gray-200 rounded-full shadow-inner transition ${formData.is_active ? '!bg-green-500' : ''}`}></div>
-                                            <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow transition-transform ${formData.is_active ? 'translate-x-4' : ''}`}></div>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-600 uppercase">Activa</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={saveCategory}
-                                disabled={saving}
-                                className="flex-1 px-4 py-2 bg-[#FFC107] text-gray-900 rounded font-bold hover:bg-yellow-400 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {saving ? 'Guardando...' : <><Save className="w-4 h-4" /> Guardar</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* ASSIGN PRODUCTS MODAL */}
-            {/* ASSIGN PRODUCTS MODAL */}
-            {showAssignModal && assignCategory && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                            <div>
-                                <h3 className="font-black text-gray-900 uppercase">Asignar Productos</h3>
-                                <p className="text-xs text-gray-500">Agregando a: <span className="font-bold text-[#FFC107]">{assignCategory.name}</span></p>
-                            </div>
-                            <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-4 border-b border-gray-200 bg-white">
-                            <div className="relative">
-                                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar producto por nombre o SKU..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#FFC107] outline-none uppercase"
-                                    value={productSearch}
-                                    onChange={e => setProductSearch(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 bg-gray-50 select-none">
-                            {loadingProducts ? (
-                                <div className="text-center py-10 text-gray-400">Cargando productos...</div>
-                            ) : products.length === 0 ? (
-                                <div className="text-center py-10 text-gray-400">No se encontraron productos</div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-1">
-                                    {products.map(product => {
-                                        const isSelected = selectedProductIds.includes(product.id);
-                                        return (
-                                            <div
-                                                key={product.id}
-                                                onMouseDown={() => handleMouseDown(product.id)}
-                                                onMouseEnter={() => handleMouseEnter(product.id)}
-                                                className={`
-                                                        cursor-pointer border rounded-sm p-2 flex items-center gap-3 transition-colors text-sm
-                                                        ${isSelected && !assignAllMatching ? 'bg-yellow-100 border-[#FFC107]' : 'bg-white border-gray-200 hover:border-gray-300'}
-                                                        ${assignAllMatching ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
-                                                    `}
-                                            >
-                                                <div className={`shrink-0 ${isSelected ? 'text-[#FFC107]' : 'text-gray-300'}`}>
-                                                    {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                                                </div>
-                                                <div className="flex-1 flex justify-between items-center">
-                                                    <span className="font-bold text-gray-800 uppercase truncate">{product.name}</span>
-                                                    <span className="text-xs font-mono text-gray-400 ml-4 shrink-0">{product.sku}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <div className="text-sm text-gray-500">
-                                    {assignAllMatching ? (
-                                        <span className="font-bold text-[#FFC107]">Asignando TODOS los {totalResults} productos encontrados</span>
-                                    ) : (
-                                        <span><span className="font-bold text-gray-900">{selectedProductIds.length}</span> seleccionados</span>
-                                    )}
-                                </div>
-
-                                {!assignAllMatching ? (
-                                    <button
-                                        onClick={handleSelectAll}
-                                        className="text-xs font-bold text-[#FFC107] hover:text-yellow-600 uppercase underline"
+                                {/* Parent */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Categoría Padre</label>
+                                    <select
+                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] outline-none bg-white"
+                                        value={formData.parent}
+                                        onChange={(e) => setFormData({ ...formData, parent: e.target.value === '' ? '' : Number(e.target.value) })}
                                     >
-                                        {products.length > 0 && products.every(p => selectedProductIds.includes(p.id)) ? 'Deseleccionar Visibles' : 'Seleccionar Visibles'}
-                                    </button>
-                                ) : null}
+                                        <option value="">(Ninguna - Raíz)</option>
+                                        {getParentOptions().map(cat => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {/* Visual indentation in select using non-breaking spaces */}
+                                                {'\u00A0\u00A0'.repeat(cat.depth || 0)} {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] text-gray-400 mt-1">Selecciona para hacer subcategoría. No puedes elegir descendientes.</p>
+                                </div>
 
-                                {/* Bulk Checkbox */}
-                                <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300">
-                                    <input
-                                        type="checkbox"
-                                        id="bulkAssign"
-                                        checked={assignAllMatching}
-                                        onChange={e => setAssignAllMatching(e.target.checked)}
-                                        className="w-4 h-4 text-[#FFC107] border-gray-300 rounded focus:ring-[#FFC107]"
-                                    />
-                                    <label htmlFor="bulkAssign" className="text-xs font-bold text-gray-700 uppercase cursor-pointer select-none">
-                                        Asignar los {totalResults} resultados
-                                    </label>
+                                <div className="flex gap-4">
+                                    {/* Sort Order */}
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Orden</label>
+                                        <input
+                                            type="number"
+                                            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#FFC107] outline-none"
+                                            value={formData.sort_order}
+                                            onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">Define la posición en el menú (1 = Primero).</p>
+                                    </div>
+
+                                    {/* Active Toggle */}
+                                    <div className="flex-1 flex flex-col justify-end">
+                                        <label className="flex items-center cursor-pointer gap-2 select-none mb-2">
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only"
+                                                    checked={formData.is_active}
+                                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                                />
+                                                <div className={`w-10 h-6 bg-gray-200 rounded-full shadow-inner transition ${formData.is_active ? '!bg-green-500' : ''}`}></div>
+                                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow transition-transform ${formData.is_active ? 'translate-x-4' : ''}`}></div>
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-600 uppercase">Activa</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex gap-3">
+
+                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
                                 <button
-                                    onClick={() => setShowAssignModal(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
                                 >
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={handleAssignProducts}
-                                    disabled={assigning || (!assignAllMatching && selectedProductIds.length === 0)}
-                                    className="px-4 py-2 bg-[#FFC107] text-gray-900 rounded font-bold hover:bg-yellow-400 transition disabled:opacity-50"
+                                    onClick={saveCategory}
+                                    disabled={saving}
+                                    className="flex-1 px-4 py-2 bg-[#FFC107] text-gray-900 rounded font-bold hover:bg-yellow-400 transition flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
-                                    {assigning ? 'Asignando...' : (assignAllMatching ? `Asignar ${totalResults} Productos` : 'Asignar Seleccionados')}
+                                    {saving ? 'Guardando...' : <><Save className="w-4 h-4" /> Guardar</>}
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-            {/* MANAGE PRODUCTS MODAL */}
-            {showManageModal && manageCategory && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                            <div>
-                                <h3 className="font-black text-gray-900 uppercase">Productos en {manageCategory.name}</h3>
-                                <p className="text-xs text-gray-500">Gestión de productos asignados directamente</p>
+                )
+            }
+            {/* ASSIGN PRODUCTS MODAL */}
+            {/* ASSIGN PRODUCTS MODAL */}
+            {
+                showAssignModal && assignCategory && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                                <div>
+                                    <h3 className="font-black text-gray-900 uppercase">Asignar Productos</h3>
+                                    <p className="text-xs text-gray-500">Agregando a: <span className="font-bold text-[#FFC107]">{assignCategory.name}</span></p>
+                                </div>
+                                <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
-                            <button onClick={() => setShowManageModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                            {loadingManaged && managedProducts.length === 0 ? (
-                                <div className="text-center py-10 text-gray-400">Cargando productos asignados...</div>
-                            ) : managedProducts.length === 0 ? (
-                                <div className="text-center py-10 text-gray-400 flex flex-col items-center">
-                                    <Package className="w-12 h-12 text-gray-200 mb-2" />
-                                    No hay productos asignados directamente a esta categoría.
+                            <div className="p-4 border-b border-gray-200 bg-white">
+                                <div className="relative">
+                                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar producto por nombre o SKU..."
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#FFC107] outline-none uppercase"
+                                        value={productSearch}
+                                        onChange={e => setProductSearch(e.target.value)}
+                                    />
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-1">
-                                    {managedProducts.map(product => (
-                                        <div
-                                            key={product.id}
-                                            className="bg-white border border-gray-200 rounded-sm p-3 flex items-center justify-between hover:border-gray-300 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className="bg-gray-100 p-2 rounded text-gray-500">
-                                                    <Package className="w-4 h-4" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="font-bold text-gray-800 text-sm truncate uppercase">{product.name}</p>
-                                                    <p className="text-xs font-mono text-gray-400">{product.sku}</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRemoveProduct(product.id)}
-                                                disabled={removingProductId === product.id}
-                                                className="ml-4 p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded transition shrink-0"
-                                                title="Desvincular de esta categoría"
-                                            >
-                                                {removingProductId === product.id ? (
-                                                    <div className="w-4 h-4 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
-                                                ) : (
-                                                    <Trash className="w-4 h-4" />
-                                                )}
-                                            </button>
-                                        </div>
-                                    ))}
+                            </div>
 
-                                    {managedHasMore && (
+                            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 select-none">
+                                {loadingProducts ? (
+                                    <div className="text-center py-10 text-gray-400">Cargando productos...</div>
+                                ) : products.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-400">No se encontraron productos</div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {products.map(product => {
+                                            const isSelected = selectedProductIds.includes(product.id);
+                                            return (
+                                                <div
+                                                    key={product.id}
+                                                    onMouseDown={() => handleMouseDown(product.id)}
+                                                    onMouseEnter={() => handleMouseEnter(product.id)}
+                                                    className={`
+                                                        cursor-pointer border rounded-sm p-2 flex items-center gap-3 transition-colors text-sm
+                                                        ${isSelected && !assignAllMatching ? 'bg-yellow-100 border-[#FFC107]' : 'bg-white border-gray-200 hover:border-gray-300'}
+                                                        ${assignAllMatching ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
+                                                    `}
+                                                >
+                                                    <div className={`shrink-0 ${isSelected ? 'text-[#FFC107]' : 'text-gray-300'}`}>
+                                                        {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                                    </div>
+                                                    <div className="flex-1 flex justify-between items-center">
+                                                        <span className="font-bold text-gray-800 uppercase truncate">{product.name}</span>
+                                                        <span className="text-xs font-mono text-gray-400 ml-4 shrink-0">{product.sku}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+                                <div className="flex items-center gap-4">
+                                    <div className="text-sm text-gray-500">
+                                        {assignAllMatching ? (
+                                            <span className="font-bold text-[#FFC107]">Asignando TODOS los {totalResults} productos encontrados</span>
+                                        ) : (
+                                            <span><span className="font-bold text-gray-900">{selectedProductIds.length}</span> seleccionados</span>
+                                        )}
+                                    </div>
+
+                                    {!assignAllMatching ? (
                                         <button
-                                            onClick={handleLoadMoreManaged}
-                                            disabled={loadingManaged}
-                                            className="w-full py-2 mt-2 text-xs font-bold text-gray-500 hover:text-gray-800 uppercase border border-dashed border-gray-300 rounded hover:border-gray-400 disabled:opacity-50"
+                                            onClick={handleSelectAll}
+                                            className="text-xs font-bold text-[#FFC107] hover:text-yellow-600 uppercase underline"
                                         >
-                                            {loadingManaged ? 'Cargando más...' : 'Cargar más productos'}
+                                            {products.length > 0 && products.every(p => selectedProductIds.includes(p.id)) ? 'Deseleccionar Visibles' : 'Seleccionar Visibles'}
                                         </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                                    ) : null}
 
-                        <div className="px-6 py-4 border-t border-gray-200 bg-white text-right">
-                            <button
-                                onClick={() => setShowManageModal(false)}
-                                className="px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
-                            >
-                                Cerrar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* IMPORT MODAL */}
-            {showImportModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-                            <h2 className="text-lg font-black text-gray-900 uppercase">Importar Categorías</h2>
-                            <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-
-                        <div className="p-6">
-                            {!importResult ? (
-                                <form onSubmit={handleImport} className="space-y-4">
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                    {/* Bulk Checkbox */}
+                                    <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300">
                                         <input
-                                            type="file"
-                                            accept=".xlsx, .xls"
-                                            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            type="checkbox"
+                                            id="bulkAssign"
+                                            checked={assignAllMatching}
+                                            onChange={e => setAssignAllMatching(e.target.checked)}
+                                            className="w-4 h-4 text-[#FFC107] border-gray-300 rounded focus:ring-[#FFC107]"
                                         />
-                                        <div className="space-y-2">
-                                            <Package className="w-10 h-10 mx-auto text-gray-400" />
-                                            <div className="text-sm font-bold text-gray-700">
-                                                {importFile ? importFile.name : 'Haz clic para seleccionar el Excel'}
-                                            </div>
-                                            <div className="text-xs text-gray-500">Solo archivos .xlsx</div>
-                                        </div>
+                                        <label htmlFor="bulkAssign" className="text-xs font-bold text-gray-700 uppercase cursor-pointer select-none">
+                                            Asignar los {totalResults} resultados
+                                        </label>
                                     </div>
-
-                                    <div className="pt-2">
-                                        <button
-                                            type="submit"
-                                            disabled={!importFile || importing}
-                                            className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                                        >
-                                            {importing ? 'Importando...' : 'Subir e Importar'}
-                                        </button>
-                                    </div>
-                                    <div className="text-xs text-gray-400 mt-2 text-center">
-                                        Columnas esperadas: Name (obligatorio), Slug, Order
-                                    </div>
-                                </form>
-                            ) : (
-                                <div className="space-y-4">
-                                    {importResult.success ? (
-                                        <div className="bg-green-50 p-4 rounded border border-green-200 text-green-800">
-                                            <div className="font-bold flex items-center gap-2 mb-2">
-                                                <CheckSquare className="w-5 h-5" /> Importación Exitosa
-                                            </div>
-                                            <ul className="text-sm space-y-1 list-disc pl-5">
-                                                <li>Creadas: <b>{importResult.stats?.created}</b></li>
-                                                <li>Actualizadas: <b>{importResult.stats?.updated}</b></li>
-                                                <li>Errores: <b>{importResult.stats?.errors}</b></li>
-                                            </ul>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-red-50 p-4 rounded border border-red-200 text-red-800">
-                                            <div className="font-bold flex items-center gap-2 mb-2">
-                                                <X className="w-5 h-5" /> Error en Importación
-                                            </div>
-                                            <p className="text-sm">{importResult.error}</p>
-                                        </div>
-                                    )}
-
-                                    <div className="max-h-40 overflow-y-auto bg-gray-100 p-3 rounded text-xs font-mono border border-gray-200">
-                                        {importResult.log?.map((l: string, i: number) => (
-                                            <div key={i}>{l}</div>
-                                        )) || 'Sin detalles.'}
-                                    </div>
-
+                                </div>
+                                <div className="flex gap-3">
                                     <button
-                                        onClick={() => { setImportResult(null); setImportFile(null); }}
-                                        className="w-full bg-gray-200 text-gray-800 font-bold py-2 rounded hover:bg-gray-300 transition"
+                                        onClick={() => setShowAssignModal(false)}
+                                        className="px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
                                     >
-                                        Volver / Importar otro
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleAssignProducts}
+                                        disabled={assigning || (!assignAllMatching && selectedProductIds.length === 0)}
+                                        className="px-4 py-2 bg-[#FFC107] text-gray-900 rounded font-bold hover:bg-yellow-400 transition disabled:opacity-50"
+                                    >
+                                        {assigning ? 'Asignando...' : (assignAllMatching ? `Asignar ${totalResults} Productos` : 'Asignar Seleccionados')}
                                     </button>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
-}
+                )
+            }
+            {/* MANAGE PRODUCTS MODAL */}
+            {
+                showManageModal && manageCategory && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                                <div>
+                                    <h3 className="font-black text-gray-900 uppercase">Productos en {manageCategory.name}</h3>
+                                    <p className="text-xs text-gray-500">Gestión de productos asignados directamente</p>
+                                </div>
+                                <button onClick={() => setShowManageModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                                {loadingManaged && managedProducts.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-400">Cargando productos asignados...</div>
+                                ) : managedProducts.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-400 flex flex-col items-center">
+                                        <Package className="w-12 h-12 text-gray-200 mb-2" />
+                                        No hay productos asignados directamente a esta categoría.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {managedProducts.map(product => (
+                                            <div
+                                                key={product.id}
+                                                className="bg-white border border-gray-200 rounded-sm p-3 flex items-center justify-between hover:border-gray-300 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="bg-gray-100 p-2 rounded text-gray-500">
+                                                        <Package className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-gray-800 text-sm truncate uppercase">{product.name}</p>
+                                                        <p className="text-xs font-mono text-gray-400">{product.sku}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemoveProduct(product.id)}
+                                                    disabled={removingProductId === product.id}
+                                                    className="ml-4 p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded transition shrink-0"
+                                                    title="Desvincular de esta categoría"
+                                                >
+                                                    {removingProductId === product.id ? (
+                                                        <div className="w-4 h-4 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
+                                                    ) : (
+                                                        <Trash className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {managedHasMore && (
+                                            <button
+                                                onClick={handleLoadMoreManaged}
+                                                disabled={loadingManaged}
+                                                className="w-full py-2 mt-2 text-xs font-bold text-gray-500 hover:text-gray-800 uppercase border border-dashed border-gray-300 rounded hover:border-gray-400 disabled:opacity-50"
+                                            >
+                                                {loadingManaged ? 'Cargando más...' : 'Cargar más productos'}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="px-6 py-4 border-t border-gray-200 bg-white text-right">
+                                <button
+                                    onClick={() => setShowManageModal(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded text-gray-700 font-bold hover:bg-gray-100 transition"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* IMPORT MODAL */}
+            {
+                showImportModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+                                <h2 className="text-lg font-black text-gray-900 uppercase">Importar Categorías</h2>
+                                <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="p-6">
+                                {!importResult ? (
+                                    <form onSubmit={handleImport} className="space-y-4">
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                            <input
+                                                type="file"
+                                                accept=".xlsx, .xls"
+                                                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            />
+                                            <div className="space-y-2">
+                                                <Package className="w-10 h-10 mx-auto text-gray-400" />
+                                                <div className="text-sm font-bold text-gray-700">
+                                                    {importFile ? importFile.name : 'Haz clic para seleccionar el Excel'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">Solo archivos .xlsx</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <button
+                                                type="submit"
+                                                disabled={!importFile || importing}
+                                                className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                                            >
+                                                {importing ? 'Importando...' : 'Subir e Importar'}
+                                            </button>
+                                        </div>
+                                        <div className="text-xs text-gray-400 mt-2 text-center">
+                                            Columnas esperadas: Name (obligatorio), Slug, Order
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {importResult.success ? (
+                                            <div className="bg-green-50 p-4 rounded border border-green-200 text-green-800">
+                                                <div className="font-bold flex items-center gap-2 mb-2">
+                                                    <CheckSquare className="w-5 h-5" /> Importación Exitosa
+                                                </div>
+                                                <ul className="text-sm space-y-1 list-disc pl-5">
+                                                    <li>Creadas: <b>{importResult.stats?.created}</b></li>
+                                                    <li>Actualizadas: <b>{importResult.stats?.updated}</b></li>
+                                                    <li>Errores: <b>{importResult.stats?.errors}</b></li>
+                                                </ul>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-red-50 p-4 rounded border border-red-200 text-red-800">
+                                                <div className="font-bold flex items-center gap-2 mb-2">
+                                                    <X className="w-5 h-5" /> Error en Importación
+                                                </div>
+                                                <p className="text-sm">{importResult.error}</p>
+                                            </div>
+                                        )}
+
+                                        <div className="max-h-40 overflow-y-auto bg-gray-100 p-3 rounded text-xs font-mono border border-gray-200">
+                                            {importResult.log?.map((l: string, i: number) => (
+                                                <div key={i}>{l}</div>
+                                            )) || 'Sin detalles.'}
+                                        </div>
+
+                                        <button
+                                            onClick={() => { setImportResult(null); setImportFile(null); }}
+                                            className="w-full bg-gray-200 text-gray-800 font-bold py-2 rounded hover:bg-gray-300 transition"
+                                        >
+                                            Volver / Importar otro
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div >
     );
 }
+
