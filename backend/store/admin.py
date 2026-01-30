@@ -1,5 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin, ImportExportMixin
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser, Product, Order, OrderItem, Category
 
 class CustomUserAdmin(ImportExportMixin, UserAdmin):
     model = CustomUser
