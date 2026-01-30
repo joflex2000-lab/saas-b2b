@@ -1,6 +1,4 @@
-from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Product, Order, OrderItem, Category
+from import_export.admin import ImportExportModelAdmin
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
@@ -9,12 +7,12 @@ class CustomUserAdmin(UserAdmin):
         ('Información B2B', {'fields': ('role', 'company_name', 'discount_rate', 'tax_id')}),
     )
 
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ImportExportModelAdmin):
     list_display = ['name', 'slug', 'parent']
     search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(ImportExportModelAdmin):
     list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
