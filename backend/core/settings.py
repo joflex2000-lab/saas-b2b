@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     # Local apps
     'store',
     'integrations',
-    'integrations',
 ]
 
 MIDDLEWARE = [
