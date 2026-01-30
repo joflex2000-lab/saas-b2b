@@ -47,33 +47,64 @@ const CategoryItem = ({ category, selectedSlug, onSelect, depth = 0 }: {
   depth?: number;
 }) => {
   const isSelected = selectedSlug === category.slug;
+  // If selected or any child is selected, we might want to expand? 
+  // User explicitly asked for "Click to unfold".
+  // So we need local state for expansion.
+  // Initially expanded if isSelected or child is selected?
+  // Let's default to collapsed unless active.
+
+  // Checking if active path includes this category would be ideal but for now let's just toggle.
+  const [expanded, setExpanded] = useState(false);
   const hasChildren = category.children && category.children.length > 0;
-  // Auto-expand if child selected? (For now simple click to filter)
+
+  // Auto-expand if current category is selected (optional, user asked for click interaction)
+  // useEffect(() => { if (isSelected) setExpanded(true); }, [isSelected]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    if (hasChildren) {
+      e.stopPropagation(); // prevent selecting category if we just want to expand? 
+      // Actually user likely wants to select AND expand or just expand.
+      // "primero la categoria principal y que al hacer click se vayan desplegando"
+      // Let's Expand Toggle.
+      setExpanded(!expanded);
+    }
+  };
 
   return (
     <div className="w-full">
-      <button
-        onClick={() => onSelect(category.slug)}
-        className={`text-sm block w-full text-left uppercase transition flex justify-between items-center group
-          ${isSelected ? 'font-black text-[#FFC107]' : 'text-gray-600 hover:text-gray-900'}
+      <div
+        className={`flex items-center justify-between w-full group transition
+          ${isSelected ? 'text-[#FFC107]' : 'text-gray-600 hover:text-gray-900'}
         `}
-        style={{ paddingLeft: `${depth * 12}px`, paddingTop: '6px', paddingBottom: '6px' }}
+        style={{ paddingLeft: `${depth * 12}px` }}
       >
-        <span className="flex items-center gap-1">
-          {hasChildren && depth === 0 && (
-            <ChevronRight className="w-3 h-3 text-gray-400" />
-          )}
+        {/* Main Click Action: Select Category */}
+        <button
+          onClick={() => onSelect(category.slug)}
+          className="flex-grow text-left text-sm uppercase font-bold py-1.5 flex items-center gap-2"
+        >
           {category.name}
-        </span>
-        {category.product_count > 0 && (
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition
-            ${isSelected ? 'bg-[#FFC107] text-black' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}
-          `}>
-            {category.product_count}
-          </span>
+          {category.product_count > 0 && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition
+                ${isSelected ? 'bg-[#FFC107] text-black' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}
+              `}>
+              {category.product_count}
+            </span>
+          )}
+        </button>
+
+        {/* Expand Button */}
+        {hasChildren && (
+          <button
+            onClick={handleToggle}
+            className="p-1 hover:bg-gray-100 rounded text-gray-400"
+          >
+            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
         )}
-      </button>
-      {category.children && category.children.length > 0 && (
+      </div>
+
+      {hasChildren && expanded && (
         <div className="border-l-2 border-gray-100 ml-1.5 my-1">
           {category.children.map(child => (
             <CategoryItem

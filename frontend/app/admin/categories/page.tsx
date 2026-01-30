@@ -443,12 +443,13 @@ export default function AdminCategoriesPage() {
                 </div>
             </div>
 
+            {/* CATEGORY TREE VIEW */}
             <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-sm">
                 <div className="max-h-[70vh] overflow-y-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre (Jerarquía)</th>
+                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre (Árbol)</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Slug</th>
                                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Orden</th>
                                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Productos</th>
@@ -462,93 +463,24 @@ export default function AdminCategoriesPage() {
                             ) : categories.length === 0 ? (
                                 <tr><td colSpan={6} className="p-8 text-center text-gray-400">No hay categorías</td></tr>
                             ) : (
-                                // We sort client-side to ensure tree-like structure if backend doesn't fully guarantee it for flat list
-                                // A simple primitive sort: put parents before children? 
-                                // Actually, without a proper tree sort, indentation might look weird if children aren't immediately after parents.
-                                // Let's just list them and show Parent column for clarity if structure isn't perfect.
-                                // Ideally backend `queryset` would be sorted by tree path, but standard Django doesn't do that easily without extra libs.
-                                // We will rely on `depth` for visual indication, even if order isn't perfect tree-traversal.
-                                categories.map((cat) => (
-                                    <tr key={cat.id} className="hover:bg-gray-50 transition group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center">
-                                                {/* Indentation Spacer */}
-                                                <div style={{ width: `${(cat.depth || 0) * 24}px` }} className="shrink-0 flex justify-end pr-2">
-                                                    {cat.depth > 0 && <span className="text-gray-300 border-l border-b border-gray-300 w-3 h-4 rounded-bl-sm -mt-2"></span>}
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-                                                    <Folder className={`w-4 h-4 ${cat.depth === 0 ? 'text-[#FFC107]' : 'text-gray-400'}`} />
-                                                    <div>
-                                                        <span className="font-bold text-gray-900 block">{cat.name}</span>
-                                                        {cat.parent_name && (
-                                                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                                                                De: {cat.parent_name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-500">{cat.slug}</td>
-                                        <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{cat.sort_order}</td>
-                                        <td className="px-6 py-4 text-center text-sm">
-                                            <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-200">
-                                                {cat.product_count}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            {cat.is_active ? (
-                                                <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-[10px] font-bold border border-green-100 uppercase tracking-wider">
-                                                    <Eye className="w-3 h-3" /> Activa
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-1 rounded text-[10px] font-bold border border-red-100 uppercase tracking-wider">
-                                                    <EyeOff className="w-3 h-3" /> Inactiva
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(cat)}
-                                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                                                    title="Editar"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => toggleStatus(cat)}
-                                                    className={`p-1.5 rounded transition ${cat.is_active ? 'text-orange-500 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}`}
-                                                    title={cat.is_active ? "Desactivar (Ocultar)" : "Activar (Mostrar)"}
-                                                >
-                                                    {cat.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                                <button
-                                                    onClick={() => deleteCategory(cat.id)}
-                                                    className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded transition"
-                                                    title="Eliminar permanentemente"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => openManageModal(cat)}
-                                                    className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition relative"
-                                                    title="Ver/Gestionar Productos Asignados"
-                                                >
-                                                    <ListIcon className="w-4 h-4" />
-                                                    {cat.product_count > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-purple-500 text-[8px] text-white">{cat.product_count > 99 ? '99+' : cat.product_count}</span>}
-                                                </button>
-                                                <button
-                                                    onClick={() => openAssignModal(cat)}
-                                                    className="p-1.5 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded transition"
-                                                    title="Asignar Productos"
-                                                >
-                                                    <Package className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                // Recursive Tree Rendering
+                                // We first filter roots (parent === null) and then recursively render children
+                                categories.filter(c => !c.parent).map(root => (
+                                    <CategoryRow
+                                        key={root.id}
+                                        category={root}
+                                        allCategories={categories}
+                                        onEdit={openEditModal}
+                                        onToggleStatus={toggleStatus}
+                                        onDelete={deleteCategory}
+                                        onAddSubcategory={(cat) => {
+                                            setEditingCategory(null);
+                                            setFormData({ name: '', parent: cat.id, sort_order: 0, is_active: true });
+                                            setShowModal(true);
+                                        }}
+                                        onManage={openManageModal}
+                                        onAssign={openAssignModal}
+                                    />
                                 ))
                             )}
                         </tbody>
@@ -938,3 +870,121 @@ export default function AdminCategoriesPage() {
     );
 }
 
+const CategoryRow = ({ category, allCategories, onEdit, onToggleStatus, onDelete, onAddSubcategory, onManage, onAssign }: any) => {
+    const [expanded, setExpanded] = useState(false);
+    const children = allCategories.filter((c: any) => c.parent === category.id).sort((a: any, b: any) => a.sort_order - b.sort_order);
+    const hasChildren = children.length > 0;
+
+    return (
+        <>
+            <tr className="hover:bg-gray-50 transition group">
+                <td className="px-6 py-4">
+                    <div className="flex items-center">
+                        {/* Indentation Spacer */}
+                        <div style={{ width: `${(category.depth || 0) * 24}px` }} className="shrink-0 flex justify-end pr-2">
+                            {/* Line connectors could go here but simple indentation is cleaner for now */}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {hasChildren ? (
+                                <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    {expanded ? <FolderOpen className="w-4 h-4 text-[#FFC107]" /> : <Folder className="w-4 h-4 text-[#FFC107]" />}
+                                </button>
+                            ) : (
+                                <Folder className="w-4 h-4 text-gray-300" />
+                            )}
+                            <div>
+                                <span className="font-bold text-gray-900 block select-none cursor-pointer" onClick={() => hasChildren && setExpanded(!expanded)}>
+                                    {category.name}
+                                </span>
+                                {category.parent_name && (
+                                    <span className="text-[10px] text-gray-400 uppercase tracking-wider block">
+                                        De: {category.parent_name}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td className="px-6 py-4 text-sm font-mono text-gray-500">{category.slug}</td>
+                <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{category.sort_order}</td>
+                <td className="px-6 py-4 text-center text-sm">
+                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-200">
+                        {category.product_count}
+                    </span>
+                </td>
+                <td className="px-6 py-4 text-center">
+                    {category.is_active ? (
+                        <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-[10px] font-bold border border-green-100 uppercase tracking-wider">
+                            Activa
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-1 rounded text-[10px] font-bold border border-red-100 uppercase tracking-wider">
+                            Inactiva
+                        </span>
+                    )}
+                </td>
+                <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={() => onAddSubcategory(category)}
+                            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition"
+                            title="Agregar Subcategoría"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => onEdit(category)}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Editar"
+                        >
+                            <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => onToggleStatus(category)}
+                            className={`p-1.5 rounded transition ${category.is_active ? 'text-orange-500 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}`}
+                            title={category.is_active ? "Desactivar" : "Activar"}
+                        >
+                            {category.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                            onClick={() => onDelete(category.id)}
+                            className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded transition"
+                            title="Eliminar"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => onManage(category)}
+                            className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition relative"
+                            title="Ver/Gestionar Productos Asignados"
+                        >
+                            <ListIcon className="w-4 h-4" />
+                            {category.product_count > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-purple-500 text-[8px] text-white">{category.product_count > 99 ? '99+' : category.product_count}</span>}
+                        </button>
+                        <button
+                            onClick={() => onAssign(category)}
+                            className="p-1.5 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded transition"
+                            title="Asignar Productos"
+                        >
+                            <Package className="w-4 h-4" />
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {expanded && children.map((child: any) => (
+                <CategoryRow
+                    key={child.id}
+                    category={child}
+                    allCategories={allCategories}
+                    onEdit={onEdit}
+                    onToggleStatus={onToggleStatus}
+                    onDelete={onDelete}
+                    onAddSubcategory={onAddSubcategory}
+                    onManage={onManage}
+                    onAssign={onAssign}
+                />
+            ))}
+        </>
+    );
+};
