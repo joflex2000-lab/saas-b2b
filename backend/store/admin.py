@@ -10,12 +10,12 @@ class CustomUserAdmin(ImportExportMixin, UserAdmin):
         ('Información B2B', {'fields': ('role', 'company_name', 'discount_rate', 'tax_id')}),
     )
 
-class CategoryAdmin(ImportExportModelAdmin):
+class CategoryAdmin(ImportExportMixin, admin.ModelAdmin):
     list_display = ['name', 'slug', 'parent']
     search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
-class ProductAdmin(ImportExportModelAdmin):
+class ProductAdmin(ImportExportMixin, admin.ModelAdmin):
     list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
