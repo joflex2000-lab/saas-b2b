@@ -14,7 +14,7 @@ User = get_user_model()
 
 username = 'admin'
 email = 'admin@example.com'
-password = 'admin'
+password = 'admin123'
 
 print("--- DEBUGGING ADMIN USER ---")
 

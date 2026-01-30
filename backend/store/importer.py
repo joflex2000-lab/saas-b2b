@@ -415,10 +415,25 @@ class ProductImporter:
     def process(self, dry_run=True):
         try:
             df = pd.read_excel(self.file, dtype=str)
-             # Expected cols: sku, name, base_price, stock, brand, category, is_active
+             
+            # Normalizar columnas (lowercase y strip)
+            df.columns = [c.strip().lower() for c in df.columns]
+            
+            # Mapeo de columnas (Español -> Inglés)
+            column_mapping = {
+                'precio': 'base_price',
+                'nombre': 'name',
+                'marca': 'brand',
+                'categoria': 'category',
+                'categoría': 'category',
+                'descripcion': 'description',
+                'descripción': 'description'
+                # 'sku' y 'stock' ya coinciden en lowercase
+            }
+            df.rename(columns=column_mapping, inplace=True)
             
             if 'sku' not in df.columns:
-                 return {'success': False, 'error': "Falta columna 'sku'"}
+                 return {'success': False, 'error': f"Falta columna 'sku'. Columnas encontradas: {list(df.columns)}"}
 
             stats = {'created': 0, 'updated': 0, 'errors': 0}
             log = []
@@ -426,60 +441,90 @@ class ProductImporter:
             # Cache categories
             categories = {c.name.lower(): c for c in Category.objects.all()}
 
-            for index, row in df.iterrows():
-                try:
-                    sku = str(row['sku']).strip()
-                    if not sku or sku.lower() == 'nan': continue
-                    
-                    name = str(row.get('name', '')).strip()
-                    brand = str(row.get('brand', '')).strip()
-                    
+            sid = transaction.savepoint()
+            try:
+                for index, row in df.iterrows():
                     try:
-                        base_price = float(row.get('base_price', 0))
-                    except:
-                        base_price = 0.0
+                        sku = str(row['sku']).strip()
+                        if not sku or sku.lower() == 'nan': continue
                         
-                    try:
-                        stock = int(float(row.get('stock', 0)))
-                    except:
-                        stock = 0
+                        name = str(row.get('name', '')).strip()
+                        brand = str(row.get('brand', '')).strip()
+                        description = str(row.get('description', '')).strip()
+                        
+                        try:
+                            base_price = float(row.get('base_price', 0))
+                        except:
+                            base_price = 0.0
+                            
+                        try:
+                            stock = int(float(row.get('stock', 0)))
+                        except:
+                            stock = 0
 
-                    is_active = str(row.get('is_active', '1')).lower() in ['1', 'true', 'yes', 'si']
-                    
-                    # Category resolution
-                    cat_name = str(row.get('category', '')).strip()
-                    category_obj = None
-                    if cat_name:
-                        category_obj = categories.get(cat_name.lower())
-                        if not category_obj and not dry_run:
-                            # Auto-create category if missing? Or Fail? Let's auto-create simple
-                            category_obj = Category.objects.create(name=cat_name, slug=cat_name.lower().replace(' ', '-'))
-                            categories[cat_name.lower()] = category_obj
+                        is_active = str(row.get('is_active', '1')).lower() in ['1', 'true', 'yes', 'si']
+                        
+                        # Category resolution
+                        cat_name = str(row.get('category', '')).strip()
+                        if not cat_name:
+                             # Try 'subcategoria' if present? Optional logic
+                             pass
+                             
+                        category_obj = None
+                        if cat_name:
+                            category_obj = categories.get(cat_name.lower())
+                            if not category_obj and not dry_run:
+                                # Auto-create category if missing
+                                category_obj = Category.objects.create(name=cat_name, slug=cat_name.lower().replace(' ', '-'))
+                                categories[cat_name.lower()] = category_obj
 
-                    defaults = {
-                        'name': name,
-                        'brand': brand,
-                        'base_price': base_price,
-                        'stock': stock,
-                        'is_active': is_active,
-                        'category': category_obj
-                    }
-                    
-                    if not dry_run:
-                        obj, created = Product.objects.update_or_create(
-                            sku=sku,
-                            defaults=defaults
-                        )
-                        if created:
-                            stats['created'] += 1
+                        defaults = {
+                            'name': name,
+                            'brand': brand,
+                            'description': description,
+                            'base_price': base_price,
+                            'stock': stock,
+                            'is_active': is_active,
+                            'category': category_obj
+                        }
+                        
+                        if not dry_run:
+                            obj, created = Product.objects.update_or_create(
+                                sku=sku,
+                                defaults=defaults
+                            )
+                            if created:
+                                stats['created'] += 1
+                            else:
+                                stats['updated'] += 1
                         else:
-                            stats['updated'] += 1
-                    else:
-                        stats['updated'] += 1 # Simulation
+                            stats['updated'] += 1 # Simulation
+                        
+                    except Exception as e:
+                        if "database is locked" in str(e):
+                             # Retry once for lock
+                             time.sleep(0.1)
+                             try:
+                                 # Retry logic duplicate mainly for lock
+                                 if not dry_run:
+                                    obj, created = Product.objects.update_or_create(sku=sku, defaults=defaults)
+                                    if created: stats['created'] += 1
+                                    else: stats['updated'] += 1
+                             except Exception as e2:
+                                stats['errors'] += 1
+                                log.append(f"Error SKU {sku}: {e2}")
+                        else:
+                            stats['errors'] += 1
+                            log.append(f"Error SKU {sku}: {e}")
+                
+                if dry_run:
+                    transaction.savepoint_rollback(sid)
+                else:
+                    transaction.savepoint_commit(sid)
                     
-                except Exception as e:
-                    stats['errors'] += 1
-                    log.append(f"Error SKU {sku}: {e}")
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+                return {'success': False, 'error': f"Error de Transacción: {str(e)}"}
 
             return {'success': True, 'stats': stats, 'log': log}
             
