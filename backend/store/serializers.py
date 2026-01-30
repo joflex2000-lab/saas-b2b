@@ -74,7 +74,9 @@ class AdminCategorySerializer(serializers.ModelSerializer):
         return obj.children.count()
     
     def get_product_count(self, obj):
-        return obj.products.count()
+        # Count products in this category AND its descendants
+        ids = obj.get_descendant_ids(include_self=True)
+        return Product.objects.filter(categories__id__in=ids).distinct().count()
     
     def get_depth(self, obj):
         return obj.get_depth()
