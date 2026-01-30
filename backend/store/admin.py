@@ -3,22 +3,19 @@ from import_export.admin import ImportExportModelAdmin, ImportExportMixin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Product, Order, OrderItem, Category
 
-class CustomUserAdmin(ImportExportMixin, UserAdmin):
+class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
     model = CustomUser
-    change_list_template = 'admin/import_export/change_list_import_export.html'
     list_display = ['email', 'username', 'role', 'company_name', 'discount_rate', 'is_staff']
     fieldsets = UserAdmin.fieldsets + (
         ('Información B2B', {'fields': ('role', 'company_name', 'discount_rate', 'tax_id')}),
     )
 
 class CategoryAdmin(ImportExportModelAdmin):
-    change_list_template = 'admin/import_export/change_list_import_export.html'
     list_display = ['name', 'slug', 'parent']
     search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
 class ProductAdmin(ImportExportModelAdmin):
-    change_list_template = 'admin/import_export/change_list_import_export.html'
     list_display = ['sku', 'name', 'base_price', 'stock', 'brand', 'category', 'status_colored']
     search_fields = ['sku', 'name', 'brand']
     list_filter = ['category', 'brand', 'is_active']
