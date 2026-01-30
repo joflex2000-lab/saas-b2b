@@ -472,7 +472,7 @@ export default function AdminCategoriesPage() {
                             <tr>
                                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre (Árbol)</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Slug</th>
-                                <th className="text-center px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Orden</th>
+
                                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Productos</th>
                                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th className="text-right px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -916,7 +916,7 @@ const CategoryRow = ({ category, allCategories, onEdit, onToggleStatus, onDelete
                     </div>
                 </td>
                 <td className="px-6 py-4 text-sm font-mono text-gray-500">{category.slug}</td>
-                <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{category.sort_order}</td>
+
                 <td className="px-6 py-4 text-center text-sm">
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-200">
                         {category.product_count}
