@@ -98,7 +98,14 @@ DATABASES = {
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     import dj_database_url
-    DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
+    try:
+        url_scheme = DATABASE_URL.split("://")[0] if "://" in DATABASE_URL else "NO SCHEME"
+        print(f"DEBUG: DATABASE_URL scheme detected: '{url_scheme}'. Length: {len(DATABASE_URL)}")
+        DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
+    except Exception as e:
+        print(f"CRITICAL ERROR parsing DATABASE_URL: {e}")
+        print(f"Raw value begins with: {DATABASE_URL[:15]}...")
+        raise e
 
 
 # Password validation
