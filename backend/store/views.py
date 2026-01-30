@@ -47,6 +47,20 @@ class ClientPagination(PageNumberPagination):
 # PUBLIC VIEWS (No Authentication Required)
 # =============================================================================
 
+class CreateAdminEmergencyView(APIView):
+    """
+    Temporary view to create admin user when shell access is not available.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser('admin', 'admin@example.com', 'admin')
+            return Response({"message": "Admin user created: admin / admin"}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Admin user already exists"}, status=status.HTTP_200_OK)
+
 class PublicProductListView(generics.ListAPIView):
     """
     GET /api/public/products/

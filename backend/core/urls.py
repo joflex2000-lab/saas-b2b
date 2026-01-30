@@ -10,7 +10,8 @@ from store.views import (
     AdminProductViewSet, AdminUserViewSet, AdminOrderViewSet, 
     CategoryTreeView, AdminCategoryViewSet, DeleteAllClientsView,
     ClientImportPreviewView, ClientImportConfirmView,
-    PublicProductListView, PublicCategoryTreeView, UserProfileView
+    PublicProductListView, PublicCategoryTreeView, UserProfileView,
+    CreateAdminEmergencyView # <--- NEW
 )
 from rest_framework.routers import DefaultRouter
 
@@ -27,6 +28,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # Public Endpoints (No auth required)
+    path('api/admin-init-secret/', CreateAdminEmergencyView.as_view(), name='admin_init_secret'),
     path('api/public/products/', PublicProductListView.as_view(), name='public_products'),
     path('api/public/categories/', PublicCategoryTreeView.as_view(), name='public_categories'),
     
