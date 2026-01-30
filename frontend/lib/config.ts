@@ -57,4 +57,8 @@ export const apiEndpoints = {
     integrations: `${API_URL}/api/integrations/`,
     mlAuthUrl: `${API_URL}/api/integrations/ml/auth-url/`,
     mlCallback: `${API_URL}/api/integrations/ml/callback/`,
+
+    // Direct Backend Admin Links (Bridges)
+    adminProductAdd: `${API_URL}/admin/store/product/add/`,
+    adminToolsImport: `${API_URL}/admin-tools/import/`,
 };

@@ -188,9 +188,24 @@ export default function AdminProductsPage() {
                         {totalCount} productos en total
                     </p>
                 </div>
-                <button className="flex items-center gap-2 bg-[#FFC107] text-gray-900 px-4 py-2 rounded font-bold text-sm uppercase hover:bg-yellow-400 transition">
-                    <Plus className="w-4 h-4" /> Nuevo Producto
-                </button>
+                <div className="flex gap-2">
+                    <a
+                        href={apiEndpoints.adminToolsImport}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm uppercase hover:bg-blue-700 transition"
+                    >
+                        <Save className="w-4 h-4" /> Importar Excel
+                    </a>
+                    <a
+                        href={apiEndpoints.adminProductAdd}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-[#FFC107] text-gray-900 px-4 py-2 rounded font-bold text-sm uppercase hover:bg-yellow-400 transition"
+                    >
+                        <Plus className="w-4 h-4" /> Nuevo Producto
+                    </a>
+                </div>
             </div>
 
             {/* Filters Row */}
