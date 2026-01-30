@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Users, Upload, FileText, Settings, LogOut, Package, Layers } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Upload, FileText, Settings, LogOut, Package, Layers, ExternalLink } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 
@@ -61,6 +61,17 @@ export default function AdminSidebar() {
                         </Link>
                     );
                 })}
+
+                <div className="pt-4 mt-4 border-t border-gray-800">
+                    <Link
+                        href="/"
+                        target="_blank"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded text-sm font-bold uppercase tracking-wide text-gray-400 hover:bg-gray-800 hover:text-[#FFC107] transition-colors group"
+                    >
+                        <ExternalLink className="w-4 h-4 group-hover:text-[#FFC107]" />
+                        Ir al Catálogo
+                    </Link>
+                </div>
             </nav>
 
             {/* User Info / Logout */}
