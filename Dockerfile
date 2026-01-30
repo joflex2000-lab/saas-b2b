@@ -35,4 +35,4 @@ RUN SECRET_KEY=building_static_files \
 
 # Define the command to run the application
 # We use sh -c to allow variable expansion for $PORT
-CMD ["sh", "-c", "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]
+CMD ["sh", "-c", "echo 'Container started!' && echo 'Running migrate...' && python manage.py migrate && echo 'Starting Gunicorn...' && gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000} --log-level debug"]
